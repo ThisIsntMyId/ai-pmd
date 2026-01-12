@@ -144,6 +144,7 @@ export async function POST(request: NextRequest) {
     messageContent.push({
       type: 'text',
       text: `# System Instructions\n\n${systemPrompt}`,
+      cache_control: { type: 'ephemeral' },
     });
 
     // 3. Add patient context if provided
@@ -274,6 +275,7 @@ export async function POST(request: NextRequest) {
     messageContent.push({
       type: 'text',
       text: 'Please review the uploaded files (intake form, identity document, and medical records) and return ONLY valid JSON matching the specified schema. Do not include markdown code blocks or any text before or after the JSON.',
+      cache_control: { type: 'ephemeral' },
     });
 
     // Call Claude API
