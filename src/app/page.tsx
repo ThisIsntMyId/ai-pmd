@@ -19,21 +19,14 @@ import {
 } from 'lucide-react';
 
 interface ReviewResponse {
-  patient_profile: string;
-  eligibility_status: string;
-  confidence_score: number;
-  confidence_tier: string;
-  documentation_status: string;
-  diagnosis_match: boolean;
-  diagnosis_match_notes: string | null;
-  decline: boolean;
-  decline_reason: string | null;
-  review_pass: boolean;
-  review_pass_reason: string;
+  application_status: 'missing_documents' | 'admin_review' | 'provider_review' | 'decline' | 'approved';
+  application_status_reasoning: string;
+  application_status_confidence: number;
   warnings: string[];
   qualifying_criteria: string[];
   recommendations: string[];
   patient_followup: string | null;
+  patient_profile: string;
   admin_summary: string;
   provider_summary: string | null;
   provider_visit_note: string | null;
@@ -216,9 +209,9 @@ export default function ReviewPage() {
     }
   };
 
-  const getEligibilityColor = (status: string) => {
+  const getApplicationStatusColor = (status: string) => {
     const statusLower = status.toLowerCase();
-    if (statusLower === 'eligible' || statusLower.includes('eligible')) {
+    if (statusLower === 'approved') {
       return {
         bg: 'bg-emerald-50/50',
         border: 'border-emerald-200',
@@ -227,6 +220,34 @@ export default function ReviewPage() {
         badge: 'bg-emerald-100 border-emerald-200 text-emerald-800'
       };
     }
+    if (statusLower === 'provider_review') {
+      return {
+        bg: 'bg-blue-50/50',
+        border: 'border-blue-200',
+        icon: 'text-blue-600',
+        text: 'text-blue-700',
+        badge: 'bg-blue-100 border-blue-200 text-blue-800'
+      };
+    }
+    if (statusLower === 'admin_review') {
+      return {
+        bg: 'bg-amber-50/50',
+        border: 'border-amber-200',
+        icon: 'text-amber-600',
+        text: 'text-amber-700',
+        badge: 'bg-amber-100 border-amber-200 text-amber-800'
+      };
+    }
+    if (statusLower === 'missing_documents') {
+      return {
+        bg: 'bg-orange-50/50',
+        border: 'border-orange-200',
+        icon: 'text-orange-600',
+        text: 'text-orange-700',
+        badge: 'bg-orange-100 border-orange-200 text-orange-800'
+      };
+    }
+    // decline
     return {
       bg: 'bg-rose-50/50',
       border: 'border-rose-200',
@@ -234,6 +255,17 @@ export default function ReviewPage() {
       text: 'text-rose-700',
       badge: 'bg-rose-100 border-rose-200 text-rose-800'
     };
+  };
+
+  const formatApplicationStatus = (status: string) => {
+    const statusMap: Record<string, string> = {
+      'missing_documents': 'Missing Documents',
+      'admin_review': 'Admin Review',
+      'provider_review': 'Provider Review',
+      'decline': 'Declined',
+      'approved': 'Approved'
+    };
+    return statusMap[status] || status;
   };
 
   return (
@@ -570,127 +602,39 @@ export default function ReviewPage() {
                 </div>
               )}
 
-              {/* Decline Banner */}
-              {results.decline && (
-                <div className="bg-red-50 border-2 border-red-300 rounded-xl shadow-sm p-4 relative overflow-hidden">
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>
-                  <div className="flex items-start gap-3">
-                    <ShieldAlert className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1">
-                      <h3 className="font-bold text-red-800 text-sm mb-2">Application Declined</h3>
-                      {results.decline_reason && (
-                        <p className="text-sm text-red-700 leading-relaxed">{results.decline_reason}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Eligibility Status */}
-              <div className={`bg-white rounded-xl border shadow-sm overflow-hidden ${getEligibilityColor(results.eligibility_status).border}`}>
-                <div className={`p-5 ${getEligibilityColor(results.eligibility_status).bg} flex items-center justify-between`}>
+              {/* Application Status */}
+              <div className={`bg-white rounded-xl border shadow-sm overflow-hidden ${getApplicationStatusColor(results.application_status).border}`}>
+                <div className={`p-5 ${getApplicationStatusColor(results.application_status).bg} flex items-center justify-between`}>
                   <div className="flex items-center gap-5">
-                    <div className={`p-3 bg-white border ${getEligibilityColor(results.eligibility_status).border} rounded-full shadow-sm`}>
-                      <Check className={`w-6 h-6 ${getEligibilityColor(results.eligibility_status).icon}`} />
+                    <div className={`p-3 bg-white border ${getApplicationStatusColor(results.application_status).border} rounded-full shadow-sm`}>
+                      <Check className={`w-6 h-6 ${getApplicationStatusColor(results.application_status).icon}`} />
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Determination</div>
-                      <h2 className={`text-2xl font-bold ${getEligibilityColor(results.eligibility_status).text} tracking-tight`}>
-                        {results.eligibility_status.toUpperCase()}
+                      <div className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Application Status</div>
+                      <h2 className={`text-2xl font-bold ${getApplicationStatusColor(results.application_status).text} tracking-tight`}>
+                        {formatApplicationStatus(results.application_status)}
                       </h2>
                     </div>
                   </div>
                   <div className="text-right space-y-2">
                     <div>
                       <div className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Confidence</div>
-                      <span className={`${getEligibilityColor(results.eligibility_status).badge} text-sm font-bold px-3 py-1 rounded-full`}>
-                        {results.confidence_score}%
+                      <span className={`${getApplicationStatusColor(results.application_status).badge} text-sm font-bold px-3 py-1 rounded-full`}>
+                        {results.application_status_confidence}%
                       </span>
                     </div>
-                    {results.confidence_tier && (
-                      <div>
-                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Tier</div>
-                        <span className="bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold px-2 py-1 rounded-full">
-                          {results.confidence_tier}
-                        </span>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Status Badges */}
-              <div className="grid grid-cols-2 gap-3">
-                {/* Documentation Status */}
-                {results.documentation_status && (
-                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3">
-                    <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Documentation Status</div>
-                    <div className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
-                      results.documentation_status === 'sufficient' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
-                      results.documentation_status === 'partial' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
-                      results.documentation_status === 'outdated' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
-                      'bg-red-100 text-red-700 border border-red-200'
-                    }`}>
-                      {results.documentation_status}
-                    </div>
-                  </div>
-                )}
-
-                {/* Diagnosis Match */}
-                {results.diagnosis_match !== undefined && (
-                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3">
-                    <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Diagnosis Match</div>
-                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold ${
-                      results.diagnosis_match ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-red-100 text-red-700 border border-red-200'
-                    }`}>
-                      {results.diagnosis_match ? (
-                        <>
-                          <CheckCircle className="w-4 h-4" />
-                          Match
-                        </>
-                      ) : (
-                        <>
-                          <X className="w-4 h-4" />
-                          No Match
-                        </>
-                      )}
-                    </div>
-                    {results.diagnosis_match_notes && (
-                      <p className="text-xs text-slate-600 mt-2">{results.diagnosis_match_notes}</p>
-                    )}
-                  </div>
-                )}
-
-                {/* Review Pass */}
-                {results.review_pass !== undefined && (
-                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3">
-                    <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Review Status</div>
-                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold ${
-                      results.review_pass ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-orange-100 text-orange-700 border border-orange-200'
-                    }`}>
-                      {results.review_pass ? (
-                        <>
-                          <CheckCircle className="w-4 h-4" />
-                          Pass
-                        </>
-                      ) : (
-                        <>
-                          <ShieldAlert className="w-4 h-4" />
-                          Hold
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Review Pass Reason */}
-              {results.review_pass_reason && (
+              {/* Application Status Reasoning */}
+              {results.application_status_reasoning && (
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Review Pass Reason</h3>
-                  <p className="text-sm text-slate-700 leading-relaxed">{results.review_pass_reason}</p>
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Status Reasoning</h3>
+                  <p className="text-sm text-slate-700 leading-relaxed">{results.application_status_reasoning}</p>
                 </div>
               )}
+
 
               {/* Qualifying Criteria */}
               {results.qualifying_criteria && results.qualifying_criteria.length > 0 && (
