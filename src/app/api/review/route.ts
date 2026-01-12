@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import AnthropicVertex from '@anthropic-ai/vertex-sdk';
 import { defaultSystemPrompt } from '@/app/prompt';
 import { criteria } from '@/app/criteria';
+import pdfParse from 'pdf-parse-new';
 
 // File size limit: 3MB
 const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB in bytes
@@ -100,12 +101,14 @@ export async function POST(request: NextRequest) {
     const medicalRecordsFiles = formData.getAll('medicalRecordsFiles') as File[];
     const idProofFiles = formData.getAll('idProofFiles') as File[];
 
-    // Combine all files for validation
+    // Combine all files for validation (excluding intake PDFs from size validation)
     const allFiles = [...intakeFiles, ...medicalRecordsFiles, ...idProofFiles];
 
-    // Validate file sizes
+    // Validate file sizes (skip intake PDFs as they can be larger)
     for (const file of allFiles) {
-      if (file.size > MAX_FILE_SIZE) {
+      // Skip size validation for intake PDFs
+      const isIntakePDF = intakeFiles.includes(file) && isPDF(file.name, file.type);
+      if (!isIntakePDF && file.size > MAX_FILE_SIZE) {
         return NextResponse.json(
           { error: `File ${file.name} exceeds 3MB limit. Size: ${(file.size / 1024 / 1024).toFixed(2)}MB` },
           { status: 400 }
@@ -165,9 +168,9 @@ export async function POST(request: NextRequest) {
     for (const file of intakeFiles) {
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
-      const base64 = buffer.toString('base64');
 
       if (isImage(file.name, file.type)) {
+        const base64 = buffer.toString('base64');
         const imageMediaType = getMediaType(file.name, file.type) as ImageMediaType;
         messageContent.push({
           type: 'image',
@@ -178,14 +181,22 @@ export async function POST(request: NextRequest) {
           },
         });
       } else if (isPDF(file.name, file.type)) {
-        messageContent.push({
-          type: 'document',
-          source: {
-            type: 'base64',
-            media_type: 'application/pdf',
-            data: base64,
-          },
-        });
+        // Extract text from intake PDF using pdf-parse
+        try {
+          // Dynamic import to avoid bundling issues with pdf-parse
+          const pdfData = await pdfParse(buffer);
+          const extractedText = pdfData.text;
+          messageContent.push({
+            type: 'text',
+            text: `# Intake Document: ${file.name}\n\n${extractedText}`,
+          });
+        } catch (pdfError) {
+          console.error(`Error parsing PDF ${file.name}:`, pdfError);
+          return NextResponse.json(
+            { error: `Failed to parse intake PDF ${file.name}: ${pdfError instanceof Error ? pdfError.message : 'Unknown error'}` },
+            { status: 400 }
+          );
+        }
       } else {
         // For non-PDF/non-image intake files (e.g., JSON), treat as text if possible
         const text = buffer.toString('utf-8');
@@ -283,6 +294,9 @@ export async function POST(request: NextRequest) {
         },
       ],
     });
+
+    console.log(JSON.stringify(messageContent, null, 2));
+    console.log(JSON.stringify(response, null, 2));
 
     // Extract response text
     const text = response.content
