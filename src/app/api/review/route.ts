@@ -3,7 +3,6 @@ import * as fs from 'fs';
 import AnthropicVertex from '@anthropic-ai/vertex-sdk';
 import { defaultSystemPrompt } from '@/app/prompt';
 import { criteria } from '@/app/criteria';
-import pdfParse from 'pdf-parse-new';
 
 // File size limit: 3MB
 const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB in bytes
@@ -181,22 +180,16 @@ export async function POST(request: NextRequest) {
           },
         });
       } else if (isPDF(file.name, file.type)) {
-        // Extract text from intake PDF using pdf-parse
-        try {
-          // Dynamic import to avoid bundling issues with pdf-parse
-          const pdfData = await pdfParse(buffer);
-          const extractedText = pdfData.text;
-          messageContent.push({
-            type: 'text',
-            text: `# Intake Document: ${file.name}\n\n${extractedText}`,
-          });
-        } catch (pdfError) {
-          console.error(`Error parsing PDF ${file.name}:`, pdfError);
-          return NextResponse.json(
-            { error: `Failed to parse intake PDF ${file.name}: ${pdfError instanceof Error ? pdfError.message : 'Unknown error'}` },
-            { status: 400 }
-          );
-        }
+        // Pass PDF directly as document
+        const base64 = buffer.toString('base64');
+        messageContent.push({
+          type: 'document',
+          source: {
+            type: 'base64',
+            media_type: 'application/pdf',
+            data: base64,
+          },
+        });
       } else {
         // For non-PDF/non-image intake files (e.g., JSON), treat as text if possible
         const text = buffer.toString('utf-8');

@@ -24,8 +24,10 @@ interface ReviewResponse {
   application_status_confidence: number;
   warnings: string[];
   qualifying_criteria: string[];
-  recommendations: string[];
-  patient_followup: string | null;
+  admin_recommendations: string[] | null;
+  admin_patient_followup: string | null;
+  provider_recommendations: string[] | null;
+  provider_patient_followup: string | null;
   patient_profile: string;
   admin_summary: string;
   provider_summary: string | null;
@@ -656,16 +658,36 @@ export default function ReviewPage() {
                 </div>
               )}
 
-              {/* Recommendations */}
-              {results.recommendations && results.recommendations.length > 0 && (
-                <div className="bg-white rounded-xl border border-blue-200 shadow-sm overflow-hidden">
-                  <div className="bg-blue-50/50 px-5 py-3 border-b border-blue-100 flex items-center gap-2">
-                    <FileEdit className="w-4 h-4 text-blue-600" />
-                    <h3 className="font-bold text-blue-900 text-sm">Recommendations</h3>
+              {/* Admin Recommendations */}
+              {results.admin_recommendations && results.admin_recommendations.length > 0 && (
+                <div className="bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
+                  <div className="bg-amber-50/50 px-5 py-3 border-b border-amber-100 flex items-center gap-2">
+                    <FileEdit className="w-4 h-4 text-amber-600" />
+                    <h3 className="font-bold text-amber-900 text-sm">Admin Recommendations</h3>
                   </div>
                   <div className="p-5">
                     <ul className="space-y-2">
-                      {results.recommendations.map((recommendation, index) => (
+                      {results.admin_recommendations.map((recommendation, index) => (
+                        <li key={index} className="flex items-start gap-2 text-sm text-slate-700">
+                          <span className="text-amber-600 font-bold mt-0.5">•</span>
+                          <span>{recommendation}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {/* Provider Recommendations */}
+              {results.provider_recommendations && results.provider_recommendations.length > 0 && (
+                <div className="bg-white rounded-xl border border-blue-200 shadow-sm overflow-hidden">
+                  <div className="bg-blue-50/50 px-5 py-3 border-b border-blue-100 flex items-center gap-2">
+                    <Stethoscope className="w-4 h-4 text-blue-600" />
+                    <h3 className="font-bold text-blue-900 text-sm">Provider Recommendations</h3>
+                  </div>
+                  <div className="p-5">
+                    <ul className="space-y-2">
+                      {results.provider_recommendations.map((recommendation, index) => (
                         <li key={index} className="flex items-start gap-2 text-sm text-slate-700">
                           <span className="text-blue-600 font-bold mt-0.5">•</span>
                           <span>{recommendation}</span>
@@ -694,15 +716,29 @@ export default function ReviewPage() {
                 </div>
               )}
 
-              {/* Patient Followup */}
-              {results.patient_followup && (
+              {/* Admin Patient Followup */}
+              {results.admin_patient_followup && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl shadow-sm p-4 relative overflow-hidden">
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-400"></div>
                   <div className="flex items-start gap-3">
                     <ShieldAlert className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
                     <div className="flex-1">
-                      <h3 className="font-bold text-amber-900 text-sm mb-2">Patient Followup Required</h3>
-                      <p className="text-sm text-amber-800 leading-relaxed">{results.patient_followup}</p>
+                      <h3 className="font-bold text-amber-900 text-sm mb-2">Admin Patient Followup</h3>
+                      <p className="text-sm text-amber-800 leading-relaxed">{results.admin_patient_followup}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Provider Patient Followup */}
+              {results.provider_patient_followup && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl shadow-sm p-4 relative overflow-hidden">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-400"></div>
+                  <div className="flex items-start gap-3">
+                    <Stethoscope className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h3 className="font-bold text-blue-900 text-sm mb-2">Provider Patient Followup</h3>
+                      <p className="text-sm text-blue-800 leading-relaxed">{results.provider_patient_followup}</p>
                     </div>
                   </div>
                 </div>
