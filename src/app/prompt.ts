@@ -432,12 +432,5 @@ Input context: 45-year-old with only seasonal allergies documented, no mobility 
   "analysis": "<h3>Patient Profile</h3><p>45-year-old female from Texas.</p><h3>Documented Conditions</h3><p>Seasonal allergies only.</p><h3>Qualifying Assessment</h3><p>Seasonal allergies do not impact mobility and do not meet any TX qualifying criteria.</p><h3>Determination</h3><p><strong>Decline.</strong> No pathway to approval with current documentation.</p>"
 }
 
----
-State: #STATE_CODE
-Application Type: #APPLICATION_TYPE
-Existing Permit: #EXISTING_PERMIT
-
-Admin Notes: #ADMIN_NOTES
-
 Review the attached patient intake form, identity document, and medical records. Evaluate for disability placard eligibility and return the JSON response.
 `

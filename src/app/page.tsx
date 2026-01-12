@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   User,
   Files,
@@ -14,7 +14,8 @@ import {
   CheckCircle,
   Loader2,
   X,
-  Upload
+  Upload,
+  Download
 } from 'lucide-react';
 
 interface ReviewResponse {
@@ -49,17 +50,14 @@ function formatBytes(bytes: number): string {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
-// Note: Default prompt and criteria are loaded from server-side modules
-// If left empty, the API will use defaults from @/app/prompt.ts and @/app/criteria.ts
-const defaultSystemPrompt = ''; // Empty = use server defaults
-const defaultCriteriaMatrix = ''; // Empty = use server defaults
-
 export default function ReviewPage() {
   const [patientName, setPatientName] = useState('');
   const [patientState, setPatientState] = useState('');
   const [patientAge, setPatientAge] = useState('');
-  const [systemPrompt, setSystemPrompt] = useState(defaultSystemPrompt);
-  const [criteriaMatrix, setCriteriaMatrix] = useState(defaultCriteriaMatrix);
+  const [systemPrompt, setSystemPrompt] = useState('');
+  const [criteriaMatrix, setCriteriaMatrix] = useState('');
+  const [defaultPrompt, setDefaultPrompt] = useState('');
+  const [defaultCriteria, setDefaultCriteria] = useState('');
   const [llmModel, setLlmModel] = useState('claude-sonnet-4-5');
   
   const [intakeFiles, setIntakeFiles] = useState<File[]>([]);
@@ -75,12 +73,55 @@ export default function ReviewPage() {
   const medicalRecordsFileRef = useRef<HTMLInputElement>(null);
   const idProofFileRef = useRef<HTMLInputElement>(null);
 
+  // Fetch default prompt and criteria on mount
+  useEffect(() => {
+    const fetchDefaults = async () => {
+      try {
+        const response = await fetch('/api/defaults');
+        if (response.ok) {
+          const data = await response.json();
+          setDefaultPrompt(data.prompt || '');
+          setDefaultCriteria(data.criteria || '');
+          setSystemPrompt(data.prompt || '');
+          setCriteriaMatrix(data.criteria || '');
+        }
+      } catch (error) {
+        console.error('Error fetching defaults:', error);
+      }
+    };
+    fetchDefaults();
+  }, []);
+
   const handleResetSystemPrompt = () => {
-    setSystemPrompt(defaultSystemPrompt);
+    setSystemPrompt(defaultPrompt);
   };
 
   const handleResetCriteria = () => {
-    setCriteriaMatrix(defaultCriteriaMatrix);
+    setCriteriaMatrix(defaultCriteria);
+  };
+
+  const handleDownloadPrompt = () => {
+    const blob = new Blob([systemPrompt || defaultPrompt], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'system-prompt.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadCriteria = () => {
+    const blob = new Blob([criteriaMatrix || defaultCriteria], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'criteria-matrix.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const handleFileChange = (
@@ -261,7 +302,7 @@ export default function ReviewPage() {
             <div className="space-y-4">
               {/* Intake Files */}
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-2">Intake Documents (JSON/PDF)</label>
+                <label className="block text-xs font-medium text-slate-700 mb-2">Intake Documents (JSON/PDF/Image)</label>
                 <input
                   ref={intakeFileRef}
                   type="file"
@@ -269,7 +310,7 @@ export default function ReviewPage() {
                   onChange={(e) => handleFileChange(e, setIntakeFiles)}
                   className="hidden"
                   id="intakeFiles"
-                  accept=".pdf,.json"
+                  accept=".pdf,.json,.jpg,.jpeg,.png"
                 />
                 <label
                   htmlFor="intakeFiles"
@@ -306,7 +347,7 @@ export default function ReviewPage() {
 
               {/* Medical Records Files */}
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-2">Medical Records (PDF)</label>
+                <label className="block text-xs font-medium text-slate-700 mb-2">Medical Records (PDF/Image)</label>
                 <input
                   ref={medicalRecordsFileRef}
                   type="file"
@@ -314,7 +355,7 @@ export default function ReviewPage() {
                   onChange={(e) => handleFileChange(e, setMedicalRecordsFiles)}
                   className="hidden"
                   id="medicalRecordsFiles"
-                  accept=".pdf"
+                  accept=".pdf,.jpg,.jpeg,.png"
                 />
                 <label
                   htmlFor="medicalRecordsFiles"
@@ -421,6 +462,14 @@ export default function ReviewPage() {
                   spellCheck="false"
                   placeholder="Leave empty to use default prompt from server..."
                 />
+                <button
+                  onClick={handleDownloadPrompt}
+                  className="mt-2 flex items-center gap-2 text-xs text-indigo-600 hover:text-indigo-700 font-medium transition"
+                  type="button"
+                >
+                  <Download className="w-3 h-3" />
+                  Download as .txt
+                </button>
               </div>
 
               <div>
@@ -440,6 +489,14 @@ export default function ReviewPage() {
                   spellCheck="false"
                   placeholder="Leave empty to use default criteria from server..."
                 />
+                <button
+                  onClick={handleDownloadCriteria}
+                  className="mt-2 flex items-center gap-2 text-xs text-indigo-600 hover:text-indigo-700 font-medium transition"
+                  type="button"
+                >
+                  <Download className="w-3 h-3" />
+                  Download as .txt
+                </button>
               </div>
 
               <div>

@@ -161,13 +161,23 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Process and add files
-    // Process intake files (PDFs expected)
+    // Process intake files (PDFs, images, or JSON expected)
     for (const file of intakeFiles) {
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
       const base64 = buffer.toString('base64');
 
-      if (isPDF(file.name, file.type)) {
+      if (isImage(file.name, file.type)) {
+        const imageMediaType = getMediaType(file.name, file.type) as ImageMediaType;
+        messageContent.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: imageMediaType,
+            data: base64,
+          },
+        });
+      } else if (isPDF(file.name, file.type)) {
         messageContent.push({
           type: 'document',
           source: {
@@ -177,7 +187,7 @@ export async function POST(request: NextRequest) {
           },
         });
       } else {
-        // For non-PDF intake files, treat as text if possible
+        // For non-PDF/non-image intake files (e.g., JSON), treat as text if possible
         const text = buffer.toString('utf-8');
         messageContent.push({
           type: 'text',
